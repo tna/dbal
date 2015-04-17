@@ -1189,17 +1189,9 @@ class SQLServerPlatform extends AbstractPlatform
 
         $format  = 'SELECT * FROM (%s) AS doctrine_tbl WHERE doctrine_rownum BETWEEN %d AND %d ORDER BY doctrine_rownum';
 
-        // Pattern to match "main" SELECT ... FROM clause (including nested parentheses in select list).
-        $selectFromPattern = '/^(\s*SELECT\s+(?:(.*)(?![^(]*\))))\sFROM\s/i';
-
         if ( ! $orderBy) {
-            //Replace only "main" FROM with OVER to prevent changing FROM also in subqueries.
-            $query = preg_replace(
-                $selectFromPattern,
-                '$1, ROW_NUMBER() OVER (ORDER BY (SELECT 0)) AS doctrine_rownum FROM ',
-                $query,
-                1
-            );
+            //Replace only first occurrence of FROM with OVER to prevent changing FROM also in subqueries.
+            $query = preg_replace('/\sFROM\s/i', ', ROW_NUMBER() OVER (ORDER BY (SELECT 0)) AS doctrine_rownum FROM ', $query, 1);
 
             return sprintf($format, $query, $start, $end);
         }
@@ -1250,7 +1242,7 @@ class SQLServerPlatform extends AbstractPlatform
 
         //Replace only first occurrence of FROM with $over to prevent changing FROM also in subqueries.
         $over  = 'ORDER BY ' . implode(', ', $overColumns);
-        $query = preg_replace($selectFromPattern, "$1, ROW_NUMBER() OVER ($over) AS doctrine_rownum FROM ", $query, 1);
+        $query = preg_replace('/\sFROM\s/i', ", ROW_NUMBER() OVER ($over) AS doctrine_rownum FROM ", $query, 1);
 
         return sprintf($format, $query, $start, $end);
     }
